@@ -1,43 +1,85 @@
+# Sparkify Data Modeling with Postgres
 
-# Project: Data Modeling with Postgres
+ETL pipeline and star schema data model built in Postgres for song play analysis, using Python and SQL.
 
-###### Udacity Data Engineer Nanodegree
-___
+---
 
-### Introduction
-A startup called Sparkify wants to analyze the data they've been collecting on songs and user activity on their new music streaming app. The analytics team is particularly interested in understanding what songs users are listening to. Currently, they don't have an easy way to query their data, which resides in a directory of JSON logs on user activity on the app, as well as a directory with JSON metadata on the songs in their app.
+## Overview
 
-They'd like a data engineer to create a Postgres database with tables designed to optimize queries on song play analysis, and bring you on the project. Your role is to create a database schema and ETL pipeline for this analysis. You'll be able to test your database and ETL pipeline by running queries given to you by the analytics team from Sparkify and compare your results with their expected results.
+Designed and built a relational data model for a music streaming app (Sparkify) to enable song play analysis. The raw data lives in two sets of JSON files — song metadata and user activity logs — which are extracted, transformed, and loaded into a Postgres star schema optimized for analytical queries.
 
-### Project Process
-1) Define fact and dimension tables for a star schema for a particular analytic focus
-2) Build an ETL pipeline that transfers data from files in two local directories into these tables in Postgres using Python and SQL.
+---
 
-## Files
+## Tech Stack
 
-- **test.ipynb** displays the first few rows of each table to let you check your database.
-- **create_tables.py** drops and creates your tables. You run this file to reset your tables before each time you run your ETL scripts.
-- **etl.ipynb** reads and processes a single file from song_data and log_data and loads the data into your tables. This notebook contains detailed instructions on the ETL process for each of the tables.
-- **etl.py** reads and processes files from song_data and log_data and loads them into your tables. You can fill this out based on your work in the ETL notebook.
-- **sql_queries.py** contains all your sql queries, and is imported into the last three files above.
-- **README.md** provides discussion on your project.
+- **Database:** PostgreSQL
+- **Language:** Python, SQL
+- **Schema Pattern:** Star Schema (fact + dimension tables)
+- **Data Format:** JSON logs (song data + event logs)
 
-## Schema for Song Play Analysis
-Star schema optimized for queries on song play analysis. 
-![Database, Start Schema](start_schema.png)
+---
 
-#### Fact Table
-- **songplays** - records in log data associated with song plays
+## Schema Design
 
-#### Dimension Tables
-- **users** - users in the app
-- **songs** - songs in music database
-- **artists** - artists in music database
-- **time** - timestamps of records in songplays broken down into specific units
+Star schema optimized for queries on song play analysis.
 
-## USE
-1- Run create_tables.py \
-`python create_tables.py` \
-2- Run test.ipynb to confirm the creation of your tables with the correct columns. Make sure to click "Restart kernel" to close the connection to the database after running this notebook. \
-3- Run etl \
-`python etl.py`
+![Star Schema](start_schema.png)
+
+### Fact Table
+
+- **songplays** — records of song play events from the activity logs, linked to songs, artists, users, and time
+
+### Dimension Tables
+
+- **users** — app users (user_id, name, gender, subscription level)
+- **songs** — songs in the music catalog (song_id, title, artist, year, duration)
+- **artists** — artists in the music catalog (artist_id, name, location, coordinates)
+- **time** — timestamps of song play events broken down into hour, day, week, month, year, weekday
+
+---
+
+## ETL Pipeline
+
+The pipeline reads raw JSON files from two local directories and loads them into the star schema:
+
+1. **Song data** (`song_data/`) — JSON files containing song and artist metadata, loaded into `songs` and `artists` dimension tables
+2. **Log data** (`log_data/`) — JSON event logs of user activity, filtered to `NextSong` events and loaded into `songplays`, `users`, and `time` tables
+
+---
+
+## Key Design Decisions
+
+- Chose a **star schema over a normalized model** because the analytics use case is read-heavy — denormalized dimension tables make song play queries faster and simpler to write
+- The `time` table pre-breaks timestamps into components (hour, day, weekday, etc.) so analysts don't need to extract these on every query
+- Used `INSERT ... ON CONFLICT DO NOTHING` for users to handle duplicate user records in the log data without failing the pipeline
+
+---
+
+## How to Run
+
+1. Install dependencies: `pip install psycopg2`
+2. Create and reset tables:
+```
+python create_tables.py
+```
+3. Run the ETL pipeline:
+```
+python etl.py
+```
+4. Verify results by running `test.ipynb`
+
+---
+
+## Repository Structure
+
+```
+├── create_tables.py      # Drops and recreates all tables
+├── etl.py                # Full ETL pipeline (all files)
+├── etl.ipynb             # Step-by-step ETL development notebook
+├── sql_queries.py        # All SQL CREATE, INSERT, and SELECT statements
+├── test.ipynb            # Validation queries to check table contents
+├── start_schema.png      # Star schema diagram
+└── data/
+    ├── song_data/        # JSON song and artist metadata
+    └── log_data/         # JSON user activity event logs
+```
